@@ -10,6 +10,10 @@ const PORT = process.env.PORT || 5000;
 app.use(cors()); // Supaya React (Vite) Bg Habib tidak kena blokir CORS
 app.use(express.json());
 
+const authRoutes = require("./routes/authRoutes");
+// ...
+app.use("/api/auth", authRoutes);
+
 // Endpoint Health Check (verifikasi koneksi Express <-> Oracle XE)
 app.get("/api/health", async (req, res) => {
   let connection;
