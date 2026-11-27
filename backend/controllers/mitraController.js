@@ -575,6 +575,91 @@ async function updateFlashSaleSession(req, res) {
   }
 }
 
+// GET /api/mitra/orders
+// Menampilkan daftar pesanan yang masuk untuk produk milik mitra yang sedang login
+async function getMitraOrders(req, res) {
+  if (!req.user.id_mitra) {
+    return res.status(403).json({
+      success: false,
+      message: 'Profil mitra restoran tidak ditemukan untuk akun ini.',
+    });
+  }
+
+  const allowedStatus = ['MENUNGGU_BAYAR', 'LUNAS', 'KEDALUWARSA'];
+  const statusFilter = req.query.status ? req.query.status.trim().toUpperCase() : null;
+
+  if (statusFilter && !allowedStatus.includes(statusFilter)) {
+    return res.status(400).json({
+      success: false,
+      message: "Filter status hanya boleh 'MENUNGGU_BAYAR', 'LUNAS', atau 'KEDALUWARSA'.",
+    });
+  }
+
+  let connection;
+  try {
+    connection = await getConnection();
+
+    const binds = { id_mitra: req.user.id_mitra };
+    let statusCondition = '';
+    if (statusFilter) {
+      statusCondition = 'AND t.status = :status';
+      binds.status = statusFilter;
+    }
+
+    const result = await connection.execute(
+      `SELECT
+         t.id_pesanan,
+         t.id_sesi,
+         p.nama_produk,
+         u.nama AS nama_pembeli,
+         u.no_hp AS no_hp_pembeli,
+         t.jumlah,
+         t.harga_satuan_pesan,
+         (t.jumlah * t.harga_satuan_pesan) AS total_harga,
+         t.dibuat_pada,
+         t.batas_bayar,
+         t.status,
+         pb.dibayar_pada
+       FROM Transaksi_Pesanan t
+       JOIN Sesi_FlashSale s ON s.id_sesi = t.id_sesi
+       JOIN Produk_Makanan p ON p.id_produk = s.id_produk
+       JOIN Pengguna u ON u.id_pengguna = t.id_pembeli
+       LEFT JOIN Pembayaran pb ON pb.id_pesanan = t.id_pesanan
+       WHERE p.id_mitra = :id_mitra
+         ${statusCondition}
+       ORDER BY t.dibuat_pada DESC, t.id_pesanan DESC`,
+      binds
+    );
+
+    const data = result.rows.map((row) => ({
+      id_pesanan: row.ID_PESANAN,
+      id_sesi: row.ID_SESI,
+      nama_produk: row.NAMA_PRODUK,
+      pembeli: {
+        nama: row.NAMA_PEMBELI,
+        no_hp: row.NO_HP_PEMBELI,
+      },
+      jumlah: row.JUMLAH,
+      harga_satuan_pesan: row.HARGA_SATUAN_PESAN,
+      total_harga: row.TOTAL_HARGA,
+      dibuat_pada: row.DIBUAT_PADA,
+      batas_bayar: row.BATAS_BAYAR,
+      status: row.STATUS,
+      dibayar_pada: row.DIBAYAR_PADA || null,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      count: data.length,
+      data,
+    });
+  } catch (err) {
+    return handleOracleError(res, err, 'Gagal mengambil daftar pesanan masuk mitra.');
+  } finally {
+    if (connection) await connection.close();
+  }
+}
+
 module.exports = {
   getMitraProducts,
   createProduct,
@@ -582,4 +667,5 @@ module.exports = {
   deleteProduct,
   createFlashSaleSession,
   updateFlashSaleSession,
+  getMitraOrders,
 };

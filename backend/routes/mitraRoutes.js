@@ -7,6 +7,7 @@ const {
   deleteProduct,
   createFlashSaleSession,
   updateFlashSaleSession,
+  getMitraOrders,
 } = require("../controllers/mitraController");
 const { verifyToken, authorizeRole } = require("../middleware/authMiddleware");
 
@@ -20,5 +21,6 @@ router.delete("/products/:id", deleteProduct);
 
 router.post("/flash-sales", createFlashSaleSession);
 router.put("/flash-sales/:id", updateFlashSaleSession);
+router.get("/orders", getMitraOrders);
 
 module.exports = router;

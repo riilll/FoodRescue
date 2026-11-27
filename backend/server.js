@@ -2,12 +2,14 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { initDB, getConnection, closeDB } = require("./config/db");
+const { notFoundHandler, errorHandler } = require("./middleware/errorHandler");
 
 const authRoutes = require("./routes/authRoutes");
 const flashSaleRoutes = require("./routes/flashSaleRoutes");
 const mitraRoutes = require("./routes/mitraRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,6 +24,8 @@ app.use("/api/flash-sales", flashSaleRoutes);
 app.use("/api/mitra", mitraRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 // Endpoint Health Check
 app.get("/api/health", async (req, res) => {
