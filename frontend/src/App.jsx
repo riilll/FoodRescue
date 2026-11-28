@@ -1,7 +1,16 @@
+import { Routes, Route } from 'react-router-dom'
+import Navbar from './components/Navbar'
+import Katalog from './pages/Katalog'
+import Login from './pages/Login'
+
 function App() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-green-600">
-      <h1 className="text-4xl font-bold text-white">FoodRescue</h1>
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Katalog />} />
+        <Route path="/login" element={<Login />} />
+      </Routes>
     </div>
   )
 }
