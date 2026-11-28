@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import api from '../api/client'
 import ItemCard from '../components/ItemCard'
+import Toast from '../components/Toast'
 
 const PAKAI_MOCK = true // ganti ke false kalau backend sudah jalan
 
@@ -17,25 +18,34 @@ function Katalog() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [notif, setNotif] = useState({ pesan: '', tipe: 'sukses' })
+
+  const muat = useCallback(async () => {
+    try {
+      if (PAKAI_MOCK) {
+        setItems((lama) => (lama.length ? lama : buatMock()))
+      } else {
+        const res = await api.get('/flash-sales')
+        setItems(res.data.data)
+      }
+      setError('')
+    } catch (err) {
+      setError(err.response?.data?.message || 'Gagal memuat katalog. Coba lagi.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    async function muat() {
-      try {
-        if (PAKAI_MOCK) {
-          setItems(buatMock())
-        } else {
-          const res = await api.get('/flash-sales')
-          setItems(res.data.data)
-        }
-        setError('')
-      } catch (err) {
-        setError(err.response?.data?.message || 'Gagal memuat katalog. Coba lagi.')
-      } finally {
-        setLoading(false)
-      }
-    }
     muat()
-  }, [])
+    const timer = setInterval(muat, 5000)
+    return () => clearInterval(timer)
+  }, [muat])
+
+  function tampilNotif(pesan, tipe) {
+    setNotif({ pesan, tipe })
+    setTimeout(() => setNotif({ pesan: '', tipe }), 4000)
+  }
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -47,9 +57,10 @@ function Katalog() {
       )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
-          <ItemCard key={item.id_sesi} item={item} />
+          <ItemCard key={item.id_sesi} item={item} onNotif={tampilNotif} onSelesai={muat} />
         ))}
       </div>
+      <Toast pesan={notif.pesan} tipe={notif.tipe} onTutup={() => setNotif({ pesan: '', tipe: notif.tipe })} />
     </div>
   )
 }
